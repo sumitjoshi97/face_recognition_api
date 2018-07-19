@@ -1,0 +1,17 @@
+{
+  "name": "SmartBrain_API",
+  "version": "1.0.0",
+  "description": "api for face recognition app - Smartbrain",
+  "main": "server.js",
+  "repository": "https://github.com/sumitjoshi97/face_recognition_api.git",
+  "author": "Sj",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "start": "nodemon server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3"
+  }
+}
