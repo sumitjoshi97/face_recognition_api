@@ -1,5 +1,5 @@
 {
-  "name": "SmartBrain_API",
+  "name": "smartbrain_api",
   "version": "1.0.0",
   "description": "api for face recognition app - Smartbrain",
   "main": "server.js",
