@@ -1,8 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors= require('cors');
+const bcrypt = require('bcrypt');
 const knex = require('knex');
 const app = express();
+
+const saltRounds = 10;
 
 const db = knex({
     client: 'pg',
@@ -14,16 +17,11 @@ const db = knex({
     }
   });
 
-
-// db.select('*').from('users').then(data => {
-//     console.log(data);
-// }); 
-
 app.use(bodyParser.json());
 app.use(cors());
 
 app.get('/', (req, res) => {
-    res.send(db.users);
+    res.send('hello');
 })
 
 app.post('/signin', (req, res) => {
@@ -39,54 +37,65 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => {
     const {name, email, password} = req.body;
-    db.inset.push({
-        id: '3',
-        name: name,
-        email: email,
-        password: password,
-        entries: 0,
-        joined: new Date()
+
+    const hash = bcrypt.hashSync(password, saltRounds);
+
+    db.transaction(trx => {
+        trx.insert({
+            hash: hash,
+            email: email
+        })
+            .into('login')
+            .returning('email')
+            .then(loginEmail => {
+                return trx('users')
+                    .returning('*')
+                    .insert({
+                        email: loginEmail[0],
+                        name: name, 
+                        joined: new Date()
+                    })
+                    .then(user => {
+                        res.json(user[0])
+                    })
+            })
+            .then(trx.commit)
+            .catch(trx.rollback)
     })
-
-    db('users').insert({
-        email: email,
-        name: name,
-        joined: new Date()
-    }).then(console.log(db.select('*').from('users')))
-
-    // return res.json(db.users[db.users.length - 1]);
+    .catch(err => res.status(400).json('unable to register'))
 });
 
 app.get('/profile/:id', (req, res) => { 
     const { id } = req.params;
 
-    let found = false;
-    db.users.forEach(user => {
-        if (user.id === id) {
-            found = true;
-            user.entries++;
-            return res.json(user.entries);
-        }
-    })
-
-    if(!found) {
-        res.status(400).send('user not found')
-    }
+    db.select('*').from('users').where({ id })
+        .then(user => {
+            if(user.length) {
+                res.json(user[0])
+            } else {
+                res.status(400).json('Not found'); 
+            }
+        })
+        .catch(err => res.status(400).json('error getting user'));
+    
 });
 
 app.put('/image', (req, res) => {
     const { id } = req.body;
-    let found = false;
-    db.users.forEach(user => {
-        if (user.id === id) {
-            found = true;
-            return res.json(user);
-        }
-    })
 
-    if(!found) {
-        res.send('user not found')
-    }        
+    db('users').where('id', '=', id)
+        .increment('entries', 1)
+        .returning('entries')
+        .then(entries => {
+            console.log(entries)
+            if(entries.length > 0 ) {
+                res.json(entries)
+            } else {
+                res.status(400).json('User not found'); 
+            }
+                
+        })
+        .catch(err => res.status(400).json('unable to get entries'));
 });
 
 
