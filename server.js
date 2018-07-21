@@ -1,28 +1,23 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors= require('cors');
+const knex = require('knex');
 const app = express();
 
-let db = {
-    users: [
-        {
-            id:'1',
-            name: 'Sj',
-            email: 'sj@email.com',
-            password: '123',
-            entries: 0,
-            joined: new Date() 
-        },
-        {
-            id:'2',
-            name: 'Sj2',
-            email: 'sj2@email.com',
-            password: '123',
-            entries: 0,
-            joined: new Date() 
-        }
-    ]
-}
+const db = knex({
+    client: 'pg',
+    connection: {
+      host : '127.0.0.1',
+      user : 'postgres',
+      password : '123',
+      database : 'SmartBrain'
+    }
+  });
+
+
+// db.select('*').from('users').then(data => {
+//     console.log(data);
+// }); 
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -36,7 +31,7 @@ app.post('/signin', (req, res) => {
 
     if(email === db.users[0].email && 
         password === db.users[0].password) {
-            res.json('success')
+            return res.json(db.users[0])
     } else {
         res.status(400).json('error loggin in')
     }
@@ -44,8 +39,8 @@ app.post('/signin', (req, res) => {
 
 app.post('/register', (req, res) => {
     const {name, email, password} = req.body;
-    db.users.push({
-        id: '4',
+    db.inset.push({
+        id: '3',
         name: name,
         email: email,
         password: password,
@@ -53,8 +48,14 @@ app.post('/register', (req, res) => {
         joined: new Date()
     })
 
-    res.send(db.users[db.users.length - 1]);
-})
+    db('users').insert({
+        email: email,
+        name: name,
+        joined: new Date()
+    }).then(console.log(db.select('*').from('users')))
+
+    // return res.json(db.users[db.users.length - 1]);
+});
 
 app.get('/profile/:id', (req, res) => { 
     const { id } = req.params;
@@ -69,13 +70,11 @@ app.get('/profile/:id', (req, res) => {
     })
 
     if(!found) {
-        res.send('user not found')
+        res.status(400).send('user not found')
     }
+});
 
-})
-
-
-app.post('/image', (req, res) => {
+app.put('/image', (req, res) => {
     const { id } = req.body;
     let found = false;
     db.users.forEach(user => {
@@ -87,8 +86,10 @@ app.post('/image', (req, res) => {
 
     if(!found) {
         res.send('user not found')
-    }
-})
+    }        
+});
+
+
 const port = 5000|| process.env.PORT;
 app.listen(port, () => {
     console.log('running on port 5000');
