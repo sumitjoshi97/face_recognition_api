@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors= require('cors');
+const clarifai = require('clarifai');
 const bcrypt = require('bcrypt');
 const knex = require('knex');
 const app = express();
@@ -17,6 +18,7 @@ const db = knex({
     }
   });
 
+
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -27,17 +29,35 @@ app.get('/', (req, res) => {
 app.post('/signin', (req, res) => {
     const {email, password} = req.body;
 
-    if(email === db.users[0].email && 
-        password === db.users[0].password) {
-            return res.json(db.users[0])
-    } else {
-        res.status(400).json('error loggin in')
+    if (!email || !password) {
+        return res.status(400).json('empty fields')
     }
+
+    db.select('email', 'hash').from('login')
+        .where('email', '=', email)
+        .then(data => {
+            const isValid = bcrypt.compareSync(password, data[0].hash);
+            if (isValid) {
+                return db.select('*').from('users')
+                    .where('email', '=', email)
+                    .then(user => {
+                        res.json(user[0])
+                    })
+                    .catch(err => res.status(400).json('unable to get user'))
+            } else {
+                res.status(400).json('wrong email / password pair')
+            }
+
+        })
+        .catch(err => res.status(400).json('wrong email / password pair'))
 })
 
 app.post('/register', (req, res) => {
     const {name, email, password} = req.body;
 
+    if (!email || !name || !password) {
+        return res.status(400).json('empty fields')
+    }
     const hash = bcrypt.hashSync(password, saltRounds);
 
     db.transaction(trx => {
@@ -87,26 +107,19 @@ app.put('/image', (req, res) => {
         .increment('entries', 1)
         .returning('entries')
         .then(entries => {
-            console.log(entries)
-            if(entries.length > 0 ) {
-                res.json(entries)
-            } else {
-                res.status(400).json('User not found'); 
-            }
-                
+            res.json(entries[0])
         })
         .catch(err => res.status(400).json('unable to get entries'));
 });
 
-
-const port = 5000|| process.env.PORT;
-app.listen(port, () => {
-    console.log('running on port 5000');
+app.post('/imageUrl', (req, res) => {
+    app.models
+        .predict(
+            Clarifai.FACE_DETECT_MODEL,
+            req.body.input)
+        .then(data => res.json(data))
+        .catch(err => res.status(400).json('unable to connect to API'))
 })
 
-
-// routes
-// signin
-// register
-// Image
-// profile:userId
+const PORT = process.env.PORT;
+app.listen(PORT)
