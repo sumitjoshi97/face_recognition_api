@@ -1,9 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors= require('cors');
-const clarifai = require('clarifai');
+const Clarifai = require('clarifai');
 const bcrypt = require('bcrypt');
 const knex = require('knex');
+
 const app = express();
 
 const saltRounds = 10;
@@ -16,6 +17,9 @@ const db = knex({
     }
 });
 
+const clarifaiAPI = new Clarifai.App({
+    apiKey: 'b9556e1bfe254ee48ce105137f50604c'
+});
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -111,13 +115,15 @@ app.put('/image', (req, res) => {
 });
 
 app.post('/imageUrl', (req, res) => {
-    app.models
+    clarifaiAPI.models
         .predict(
             Clarifai.FACE_DETECT_MODEL,
             req.body.input)
-        .then(data => res.json(data))
+        .then(data => { 
+            res.json(data) 
+        })
         .catch(err => res.status(400).json('unable to connect to API'))
 })
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT);
