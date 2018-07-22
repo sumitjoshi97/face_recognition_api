@@ -11,7 +11,7 @@ const saltRounds = 10;
 const db = knex({
     client: 'pg',
     connection: {
-      host : '127.0.0.1',
+      host : 'postgresql-adjacent-68880',
       user : 'postgres',
       password : '123',
       database : 'SmartBrain'
